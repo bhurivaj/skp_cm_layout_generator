@@ -82,7 +82,7 @@ module SkpCm
       end
 
       def copy_text(text)
-        copy = Layout::FormattedText.new('x', text.untransformed_bounds)
+        copy = Layout::FormattedText.new('x', source_bounds(text))
         copy.rtf = text.rtf
         transform(copy, text)
         copy
@@ -113,7 +113,7 @@ module SkpCm
       end
 
       def copy_ellipse(path)
-        copy = Layout::Ellipse.new(path.untransformed_bounds)
+        copy = Layout::Ellipse.new(source_bounds(path))
         transform(copy, path)
         copy
       end
@@ -130,6 +130,11 @@ module SkpCm
           end
         end
         path
+      end
+
+      # Bounds before the explicit transformation; LayOut raises for untransformed_bounds when there is none
+      def source_bounds(entity)
+        entity.transformation ? entity.untransformed_bounds : entity.bounds
       end
 
       # Entities that were never moved/rotated have no explicit transformation (nil)

@@ -13,8 +13,15 @@ module Layout
       :tr
     end
 
+    # Real LayOut raises when the entity was never moved/rotated (probe 2026-10-12)
     def untransformed_bounds
+      raise ArgumentError, 'The entity does not have an explicit transform' if transformation.nil?
+
       :ub
+    end
+
+    def bounds
+      :b
     end
 
     def transform!(transformation)
@@ -224,6 +231,25 @@ class TestPageCloner < Minitest::Test
     copy = doc.added[0][0]
     assert_kind_of Layout::Ellipse, copy, 'bezier rebuild distorted the circle in real LayOut'
     assert_equal [:ub, [:tr]], [copy.bounds_arg, copy.transforms]
+  end
+
+  def test_circle_without_transformation_uses_bounds
+    p = line
+    p.points = %i[p0 c a1 a2 p1 b1 b2 p2 c1 c2 p3 d1 d2 p4 p5]
+    p.point_types = CIRCLE_TYPES
+    p.closed_flag = true
+    p.define_singleton_method(:transformation) { nil }
+    doc = master
+    assert_empty C.copy_page(Page.new('A', [p]), doc, :pg)
+    assert_equal [:b, nil], [doc.added[0][0].bounds_arg, doc.added[0][0].transforms]
+  end
+
+  def test_text_without_transformation_uses_bounds
+    t = text('t')
+    t.define_singleton_method(:transformation) { nil }
+    doc = master
+    assert_empty C.copy_page(Page.new('A', [t]), doc, :pg)
+    assert_equal :b, doc.added[0][0].bounds_arg
   end
 
   def test_closed_path_without_close_point_is_closed
