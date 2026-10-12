@@ -19,4 +19,4 @@
 ## Development
 
 - Test: `for t in tests/tc_*.rb; do ruby "$t"; done`
-- Build: `./build.sh` (ต้องมี `skp_cm_layout_generator/templates/CIxCM.layout` — ไฟล์นี้ไม่อยู่ใน git)
+- Build: `./build.sh` (รวม template `skp_cm_layout_generator/templates/CIxCM.layout`; ไฟล์ backup `*~*` ของ LayOut ไม่ถูกรวม)
