@@ -40,6 +40,11 @@ module Layout
     POINT_TYPE_CLOSE = 5
     attr_accessor :points, :point_types
     attr_reader :built, :closed
+    attr_accessor :closed_flag
+
+    def closed?
+      closed_flag ? true : false
+    end
 
     def initialize(*points)
       @built = [points]
@@ -190,6 +195,27 @@ class TestPageCloner < Minitest::Test
     warnings = C.copy_page(Page.new('A', [bad, text('good')]), doc, :pg)
     assert_equal ['good'], doc.added.map { |e, _l, _p| e.rtf }
     assert_match(/หน้า A.*locked layer/, warnings.first)
+  end
+
+  # Circle as LayOut stores it (probe of the template title group): move, arc centre, 4 beziers, end point
+  CIRCLE_TYPES = [0, 3, 4, 4, 2, 4, 4, 2, 4, 4, 2, 4, 4, 2, 2].freeze
+
+  def test_path_segments_circle_skips_arc_centre
+    points = %i[p0 c a1 a2 p1 b1 b2 p2 c1 c2 p3 d1 d2 p4 p5]
+    assert_equal [[:move, :p0], [:bezier, :a1, :a2, :p1], [:bezier, :b1, :b2, :p2], [:bezier, :c1, :c2, :p3],
+                  [:bezier, :d1, :d2, :p4], [:line, :p5]], C.path_segments(points, CIRCLE_TYPES)
+  end
+
+  def test_closed_path_without_close_point_is_closed
+    p = line
+    p.points = %i[p0 c a1 a2 p1 b1 b2 p2 c1 c2 p3 d1 d2 p4 p5]
+    p.point_types = CIRCLE_TYPES
+    p.closed_flag = true
+    doc = master
+    assert_empty C.copy_page(Page.new('A', [p]), doc, :pg)
+    copy = doc.added[0][0]
+    assert_equal [%i[p0 a1 a2 p1], %i[b1 b2 p2], %i[c1 c2 p3], %i[d1 d2 p4], [:p5]], copy.built
+    assert copy.closed
   end
 
   def test_entities_without_transformation_are_copied_as_is

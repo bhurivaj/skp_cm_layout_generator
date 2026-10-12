@@ -41,7 +41,8 @@ module SkpCm
           layers.find { |l| !(l.respond_to?(:shared?) && l.shared?) && !(l.respond_to?(:locked?) && l.locked?) }
       end
 
-      # [[:move, p], [:line, p], [:bezier, c1, c2, p], [:close]] — nil when the path has parts we cannot rebuild
+      # [[:move, p], [:line, p], [:bezier, c1, c2, p], [:close]] — nil when the path has parts we cannot rebuild.
+      # Arcs and circles come as bezier segments plus an arc-centre point, which is skipped.
       def path_segments(points, types)
         segments = []
         i = 0
@@ -50,6 +51,8 @@ module SkpCm
           when Layout::Path::POINT_TYPE_MOVE_TO then segments << [:move, points[i]]
           when Layout::Path::POINT_TYPE_LINE_TO then segments << [:line, points[i]]
           when Layout::Path::POINT_TYPE_CLOSE then segments << [:close]
+          when Layout::Path::POINT_TYPE_ARC_CENTER then nil # reference point of an arc/circle, not drawn
+          when Layout::Path::POINT_TYPE_BEZIER_TO then segments << [:line, points[i]] # end point with no controls
           when Layout::Path::POINT_TYPE_BEZIER_CONTROL
             return nil unless types[i + 1] == Layout::Path::POINT_TYPE_BEZIER_CONTROL &&
                               types[i + 2] == Layout::Path::POINT_TYPE_BEZIER_TO
@@ -90,7 +93,10 @@ module SkpCm
         return nil unless segments
 
         copy = build_path(segments)
-        transform(copy, path) if copy
+        return nil unless copy
+
+        copy.close if path.closed? && !copy.closed?
+        transform(copy, path)
         copy
       end
 
