@@ -279,4 +279,16 @@ class TestPageCloner < Minitest::Test
     assert_equal 'Layout', doc.added[0][1].name
     assert_match(/Gone/, warnings.first)
   end
+
+  def test_one_failing_child_keeps_the_rest_of_the_group
+    bad = text('bad')
+    bad.define_singleton_method(:rtf) { raise ArgumentError, 'broken rtf' }
+    good = text('<PageName>')
+    group = Layout::Group.new([bad, good])
+    doc = master
+    warnings = C.copy_page(Page.new('A', [group]), doc, :pg)
+    assert_equal 1, doc.added.size, 'the title group must still be copied'
+    assert_equal ['<PageName>'], doc.added[0][0].entities.map(&:rtf)
+    assert_match(/FormattedText.*หน้า A.*broken rtf/, warnings.first)
+  end
 end

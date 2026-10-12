@@ -159,7 +159,12 @@ module SkpCm
 
       def copy_group(group, warnings, page_name)
         children = list(group.entities).select { |c| !c.respond_to?(:group) || c.group.nil? || c.group == group }
-        copies = children.reject { |c| c.is_a?(Layout::SketchUpModel) }.map { |c| clone(c, warnings, page_name) }.compact
+        copies = children.reject { |c| c.is_a?(Layout::SketchUpModel) }.map do |child|
+          clone(child, warnings, page_name)
+        rescue StandardError => e
+          warnings << "copy #{kind(child)} ในหน้า #{page_name} ไม่ได้: #{e.message}" # keep the rest of the group
+          nil
+        end.compact
         copies.empty? ? nil : Layout::Group.new(copies)
       end
 
