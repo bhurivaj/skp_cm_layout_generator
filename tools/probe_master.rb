@@ -19,6 +19,10 @@ module SkpCm
     def self.show(entity)
       b = entity.bounds
       text = entity.is_a?(Layout::FormattedText) ? " text=#{entity.plain_text.inspect}" : ''
+      if entity.is_a?(Layout::Path)
+        text = " class=#{entity.class.name} types=#{entity.point_types.inspect} closed=#{entity.closed?} " \
+               "tr=#{entity.transformation.inspect} segs=#{C.path_segments(entity.points, entity.point_types) ? 'ok' : 'NIL'}"
+      end
       layer = entity.layer_instance ? entity.layer_instance.definition.name : 'nil'
       group = entity.respond_to?(:group) && entity.group ? 'yes' : 'no'
       "  #{C.kind(entity)} in_group=#{group} layer=#{layer} ul=#{b.upper_left.to_a.map { |v| v.round(3) }} " \
@@ -39,6 +43,9 @@ module SkpCm
       tpage = C.list(src.pages).reverse.find { |p| C.list(p.entities).any? { |e| e.is_a?(Layout::SketchUpModel) } }
       puts "== template page #{tpage.name.inspect} nonshared:"
       C.list(tpage.nonshared_entities).each { |e| puts show(e) }
+      C.list(tpage.nonshared_entities).select { |e| e.is_a?(Layout::Group) }.each do |g|
+        C.list(g.entities).each { |e| puts "    child:#{show(e)}" }
+      end
       texts(tpage.nonshared_entities).each { |e| puts "  text in page/group: #{e.plain_text.inspect}" }
       page = dst.pages.add("probe - #{tpage.name}")
       puts "copy warnings: #{C.copy_page(tpage, dst, page).inspect}"
