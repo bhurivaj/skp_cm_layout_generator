@@ -5,11 +5,14 @@
 # Copies the last template page that has a viewport into a second copy of the template, fills title line 2,
 # adds the active model, saves to a temp file. The template itself is never saved.
 require 'tmpdir'
-require_relative '../skp_cm_layout_generator/title_text'
-require_relative '../skp_cm_layout_generator/page_cloner'
+# load (not require) so a second run in the same SketchUp session picks up edited files
+load File.expand_path('../skp_cm_layout_generator/title_text.rb', __dir__)
+load File.expand_path('../skp_cm_layout_generator/page_cloner.rb', __dir__)
 
 module SkpCm
   module LayoutMasterProbe
+    remove_const(:TEMPLATE) if const_defined?(:TEMPLATE, false)
+    remove_const(:C) if const_defined?(:C, false)
     TEMPLATE = File.expand_path('../skp_cm_layout_generator/templates/CIxCM.layout', __dir__)
     C = SkpCm::LayoutGenerator::PageCloner
 
