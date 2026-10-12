@@ -22,8 +22,37 @@ module Layout
     end
   end
 
+  class FormattedText
+    attr_accessor :plain_text, :fail_with
+    attr_reader :applied
+
+    def initialize(plain_text)
+      @plain_text = plain_text
+    end
+
+    def style
+      :line1_style
+    end
+
+    def plain_text=(text)
+      raise ArgumentError, fail_with if fail_with
+
+      @plain_text = text
+    end
+
+    def apply_style(style)
+      @applied = style
+    end
+  end
+
   class SketchUpModel; end
-  class Group; end
+  class Group
+    attr_reader :entities
+
+    def initialize(entities = [])
+      @entities = entities
+    end
+  end
 end
 
 require_relative '../skp_cm_layout_generator/layout_builder'
@@ -107,5 +136,28 @@ class TestLayoutBuilder < Minitest::Test
     B.swap(doc, Page.new('A'), old, :new_vp, 'A-1', warnings)
     assert_equal [:new_vp], doc.removed, 'the new viewport must be taken out again — no stacked duplicate'
     assert_match(/A-1/, warnings.first)
+  end
+  TitlePage = Struct.new(:name, :nonshared_entities)
+
+  def test_fill_titles_sets_line_2_with_first_line_style
+    name = Layout::FormattedText.new("<PageName>\n")
+    number = Layout::FormattedText.new('<PageNumber>')
+    other = Layout::FormattedText.new('Note')
+    warnings = []
+    B.fill_titles(TitlePage.new('tent1 - A', [other, Layout::Group.new([name, number])]), %w[A-01 A-02], warnings)
+    assert_empty warnings
+    assert_equal ["<PageName>\nA-01, A-02", :line1_style], [name.plain_text, name.applied]
+    assert_equal "<PageNumber>\nA, B", number.plain_text
+    assert_equal 'Note', other.plain_text
+  end
+
+  def test_fill_titles_missing_or_locked_text_warns
+    number = Layout::FormattedText.new('<PageNumber>')
+    number.fail_with = 'locked'
+    warnings = []
+    B.fill_titles(TitlePage.new('tent1 - A', [number]), %w[A], warnings)
+    assert_equal 2, warnings.size
+    assert_match(/tent1 - A.*<PageName>/, warnings[0])
+    assert_match(/<PageNumber>.*locked/, warnings[1])
   end
 end
