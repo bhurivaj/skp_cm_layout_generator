@@ -23,9 +23,9 @@ module SkpCm
         return UI.messagebox("ไม่พบ template:\n#{TEMPLATE}") unless File.exist?(TEMPLATE)
 
         @busy = true
-        HubLink.find_lead(opp) do |ok, lead|
+        HubLink.fetch_project(opp) do |ok, project|
           @busy = false
-          guard { create(skp, opp, ok, lead) }
+          guard { create(skp, opp, ok, project) }
         end
       rescue StandardError => e
         @busy = false
@@ -63,11 +63,11 @@ module SkpCm
         model.path
       end
 
-      def create(skp, opp, ok, lead)
-        return UI.messagebox(lead) unless ok
-        return UI.messagebox("ไม่พบ #{opp} ใน Odoo (CRM)") unless lead
+      def create(skp, opp, ok, project)
+        return UI.messagebox(project) unless ok
+        return UI.messagebox("ไม่พบ #{opp} ใน Odoo (CRM)") unless project
 
-        values, warnings = ProjectInfo.lead_values(opp, lead)
+        values, warnings = ProjectInfo.lead_values(opp, project)
         output = ProjectInfo.output_path(skp)
         if File.exist?(output)
           return unless UI.messagebox("มี #{File.basename(output)} อยู่แล้ว — เขียนทับ?", MB_YESNO) == IDYES

@@ -37,18 +37,42 @@ class TestProjectInfo < Minitest::Test
     assert_equal '/a/B.layout', P.output_path('/a/B.SKP')
   end
 
+  ADDRESS = "บริษัท B จำกัด\n253/9 AK Building ซอยสวนพลู6\nThung Maha Mek Sathon\nกรุงเทพมหานคร / Bangkok Thailand 10120"
+
+  def project(lead, extra = {})
+    { 'lead' => lead, 'contact_address' => '', 'user_name' => '', 'warnings' => [] }.merge(extra)
+  end
+
   def test_lead_values
-    values, warnings = P.lead_values('OPP-20261000074', 'name' => 'งาน A', 'partner_id' => [759, 'บริษัท B จำกัด'])
-    assert_equal({ 'ProjectName' => 'งาน A', 'ClientName' => 'บริษัท B จำกัด', 'ProjectNumber' => 'OPP-20261000074' }, values)
+    values, warnings = P.lead_values('OPP-20261000074',
+                                     project({ 'name' => 'งาน A', 'partner_id' => [759, 'บริษัท B จำกัด'] },
+                                             'contact_address' => ADDRESS, 'user_name' => 'Pensom J.'))
+    assert_equal({ 'ProjectName' => 'งาน A', 'ClientName' => 'บริษัท B จำกัด', 'ProjectNumber' => 'OPP-20261000074',
+                   'ClientAddress' => "253/9 AK Building ซอยสวนพลู6\nThung Maha Mek Sathon\n" \
+                                      'กรุงเทพมหานคร / Bangkok Thailand 10120',
+                   'DrawnBy' => 'Pensom J.' }, values)
     assert_empty warnings
   end
 
   def test_lead_without_partner_or_name
-    values, warnings = P.lead_values('OPP-1', 'name' => false, 'partner_id' => false)
+    values, warnings = P.lead_values('OPP-1', project('name' => false, 'partner_id' => false))
     assert_equal '', values['ProjectName']
     assert_equal '', values['ClientName']
+    assert_equal '', values['ClientAddress']
     assert_equal 2, warnings.size
     assert(warnings.all? { |w| w.include?('OPP-1') })
+  end
+
+  def test_fetch_warnings_are_kept
+    _values, warnings = P.lead_values('OPP-1', project({ 'name' => 'P', 'partner_id' => [1, 'C'] },
+                                                       'warnings' => ['อ่านชื่อผู้เขียนแบบไม่ได้']))
+    assert_includes warnings, 'อ่านชื่อผู้เขียนแบบไม่ได้'
+  end
+
+  def test_address_keeps_first_line_when_it_is_not_the_client_name
+    assert_equal "C, Mr. X\n1 Road", P.address_text("C, Mr. X\n1 Road\n", 'C')
+    assert_equal '1 Road', P.address_text("  C \n\n1 Road", 'C')
+    assert_equal '', P.address_text(false, 'C')
   end
 
   def test_summary
