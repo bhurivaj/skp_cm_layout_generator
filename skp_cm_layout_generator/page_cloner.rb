@@ -89,6 +89,8 @@ module SkpCm
       end
 
       def copy_path(path)
+        return copy_ellipse(path) if full_ellipse?(path)
+
         segments = path_segments(path.points, path.point_types)
         return nil unless segments
 
@@ -96,6 +98,22 @@ module SkpCm
         return nil unless copy
 
         copy.close if path.closed? && !copy.closed?
+        transform(copy, path)
+        copy
+      end
+
+      # A whole circle/ellipse: move, arc centre, 4 bezier quarters (+ end point), closed.
+      # Rebuilding it from the beziers distorted it in LayOut (probe 2026-10-12), so use its bounds.
+      def full_ellipse?(path)
+        types = path.point_types
+        quarter = [Layout::Path::POINT_TYPE_BEZIER_CONTROL, Layout::Path::POINT_TYPE_BEZIER_CONTROL,
+                   Layout::Path::POINT_TYPE_BEZIER_TO]
+        body = [Layout::Path::POINT_TYPE_MOVE_TO, Layout::Path::POINT_TYPE_ARC_CENTER] + quarter * 4
+        path.closed? && (types == body || types == body + [Layout::Path::POINT_TYPE_BEZIER_TO])
+      end
+
+      def copy_ellipse(path)
+        copy = Layout::Ellipse.new(path.untransformed_bounds)
         transform(copy, path)
         copy
       end

@@ -67,6 +67,14 @@ module Layout
     end
   end
 
+  class Ellipse < Entity
+    attr_reader :bounds_arg
+
+    def initialize(bounds)
+      @bounds_arg = bounds
+    end
+  end
+
   class SketchUpModel < Entity; end
   class Image < Entity; end
 end
@@ -206,7 +214,7 @@ class TestPageCloner < Minitest::Test
                   [:bezier, :d1, :d2, :p4], [:line, :p5]], C.path_segments(points, CIRCLE_TYPES)
   end
 
-  def test_closed_path_without_close_point_is_closed
+  def test_full_circle_is_rebuilt_as_ellipse_from_its_bounds
     p = line
     p.points = %i[p0 c a1 a2 p1 b1 b2 p2 c1 c2 p3 d1 d2 p4 p5]
     p.point_types = CIRCLE_TYPES
@@ -214,8 +222,18 @@ class TestPageCloner < Minitest::Test
     doc = master
     assert_empty C.copy_page(Page.new('A', [p]), doc, :pg)
     copy = doc.added[0][0]
-    assert_equal [%i[p0 a1 a2 p1], %i[b1 b2 p2], %i[c1 c2 p3], %i[d1 d2 p4], [:p5]], copy.built
-    assert copy.closed
+    assert_kind_of Layout::Ellipse, copy, 'bezier rebuild distorted the circle in real LayOut'
+    assert_equal [:ub, [:tr]], [copy.bounds_arg, copy.transforms]
+  end
+
+  def test_closed_path_without_close_point_is_closed
+    p = line
+    p.points = %i[a b c]
+    p.point_types = [P::POINT_TYPE_MOVE_TO, P::POINT_TYPE_LINE_TO, P::POINT_TYPE_LINE_TO]
+    p.closed_flag = true
+    doc = master
+    C.copy_page(Page.new('A', [p]), doc, :pg)
+    assert doc.added[0][0].closed
   end
 
   def test_entities_without_transformation_are_copied_as_is
