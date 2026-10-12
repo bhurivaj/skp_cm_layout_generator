@@ -1,0 +1,59 @@
+# frozen_string_literal: true
+
+# Dev only — in SketchUp, open a saved .skp, then in Ruby Console:
+#   load '<repo>/tools/probe_master.rb'
+# Copies the last template page that has a viewport into a second copy of the template, fills title line 2,
+# adds the active model, saves to a temp file. The template itself is never saved.
+require 'tmpdir'
+require_relative '../skp_cm_layout_generator/title_text'
+require_relative '../skp_cm_layout_generator/page_cloner'
+
+module SkpCm
+  module LayoutMasterProbe
+    TEMPLATE = File.expand_path('../skp_cm_layout_generator/templates/CIxCM.layout', __dir__)
+    C = SkpCm::LayoutGenerator::PageCloner
+
+    def self.show(entity)
+      b = entity.bounds
+      text = entity.is_a?(Layout::FormattedText) ? " text=#{entity.plain_text.inspect}" : ''
+      layer = entity.layer_instance ? entity.layer_instance.definition.name : 'nil'
+      group = entity.respond_to?(:group) && entity.group ? 'yes' : 'no'
+      "  #{C.kind(entity)} in_group=#{group} layer=#{layer} ul=#{b.upper_left.to_a.map { |v| v.round(3) }} " \
+        "size=#{b.width.round(3)}x#{b.height.round(3)}#{text}"
+    end
+
+    def self.run
+      src = Layout::Document.open(TEMPLATE)
+      dst = Layout::Document.open(TEMPLATE)
+      tpage = C.list(src.pages).reverse.find { |p| C.list(p.entities).any? { |e| e.is_a?(Layout::SketchUpModel) } }
+      puts "== template page #{tpage.name.inspect} nonshared:"
+      C.list(tpage.nonshared_entities).each { |e| puts show(e) }
+      page = dst.pages.add("probe - #{tpage.name}")
+      puts "copy warnings: #{C.copy_page(tpage, dst, page).inspect}"
+      puts '== copied page nonshared:'
+      C.list(page.nonshared_entities).each { |e| puts show(e) }
+      [['<PageName>', 'A-01, A-02'], ['<PageNumber>', 'A, B']].each do |tag, value|
+        text = C.list(page.nonshared_entities).find { |e| e.is_a?(Layout::FormattedText) && e.plain_text.include?(tag) }
+        next puts("NO TEXT #{tag}") unless text
+
+        style = text.style
+        text.plain_text = SkpCm::LayoutGenerator::TitleText.with_line2(text.plain_text, value)
+        text.apply_style(style)
+        puts "#{tag}: plain=#{text.plain_text.inspect} display=#{text.display_text(page).inspect}"
+      end
+      skp = Sketchup.active_model.path
+      unless skp.empty?
+        C.list(tpage.entities).select { |e| e.is_a?(Layout::SketchUpModel) }.each do |old|
+          dst.add_entity(Layout::SketchUpModel.new(skp, old.bounds), C.layer_for(dst, old), page)
+        end
+      end
+      out = File.join(Dir.tmpdir, 'skp_cm_layout_master_probe.layout')
+      dst.save(out)
+      puts "saved → #{out} — open it, compare page #{page.name.inspect} with #{tpage.name.inspect}"
+    rescue StandardError => e
+      puts "PROBE ERROR #{e.class}: #{e.message}\n#{e.backtrace.first(6).join("\n")}"
+    end
+  end
+end
+
+SkpCm::LayoutMasterProbe.run
