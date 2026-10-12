@@ -1,0 +1,4 @@
+*.rbz
+.DS_Store
+# Template still holds old customer data — do not commit until a clean one replaces it
+skp_cm_layout_generator/templates/*.layout
