@@ -33,6 +33,20 @@ module SkpCm
         warnings
       end
 
+      # Shows/hides each layer of to_page like the same-named layer on from_page (template). Returns warnings.
+      def copy_layer_visibility(from_page, from_doc, to_page, doc)
+        sources = list(from_doc.layers)
+        list(doc.layers).each_with_object([]) do |layer, warnings|
+          source = sources.find { |l| l.name == layer.name }
+          next unless source
+
+          visible = from_page.layer_visible?(source)
+          to_page.set_layer_visibility(layer, visible) if to_page.layer_visible?(layer) != visible
+        rescue StandardError => e
+          warnings << "ตั้งการแสดง layer #{layer.name} ในหน้า #{to_page.name} ไม่ได้: #{e.message}"
+        end
+      end
+
       # Layer with the same name in doc; otherwise the first layer that is neither shared nor locked
       def layer_for(doc, entity)
         layers = list(doc.layers)

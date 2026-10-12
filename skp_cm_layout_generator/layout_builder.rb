@@ -48,6 +48,8 @@ module SkpCm
           placed = new_viewports(template_page.name, olds, skp_path, warnings)
           placed.each { |old, viewport, label| place(doc, page, old, viewport, label, warnings) }
           fill_titles(page, placed.map(&:last), warnings)
+          # last: entities may not be addable to a layer that is already hidden on the page
+          warnings.concat(PageCloner.copy_layer_visibility(template_page, source, page, doc))
         end
         save(doc, master_path)
         warnings
