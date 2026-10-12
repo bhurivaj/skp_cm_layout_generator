@@ -18,8 +18,13 @@ module SkpCm
         nil
       end
 
-      def output_path(skp_path)
-        File.join(File.dirname(skp_path), File.basename(skp_path, File.extname(skp_path)) + '.layout')
+      # One LayOut file per project, next to the .skp (spec 2026-10-12-layout-master-design.md §2)
+      def output_path(skp_path, opp)
+        File.join(File.dirname(skp_path), "#{opp} Master Layout.layout")
+      end
+
+      def model_name(skp_path)
+        File.basename(skp_path, File.extname(skp_path))
       end
 
       # project: from HubLink.fetch_project — 'lead' (crm.lead with 'name', 'partner_id' = [id, name] or false),

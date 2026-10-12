@@ -32,9 +32,14 @@ class TestProjectInfo < Minitest::Test
     assert_equal 'OPP-20261000001', P.opp_from_path('C:\\Projects\\OPP-20261000001\\03_dwg\\a.skp')
   end
 
-  def test_output_path_next_to_skp
-    assert_equal "#{BASE}/OPP-1/03_dwg/งาน แบบ.layout", P.output_path("#{BASE}/OPP-1/03_dwg/งาน แบบ.skp")
-    assert_equal '/a/B.layout', P.output_path('/a/B.SKP')
+  def test_output_path_is_master_next_to_skp
+    assert_equal "#{BASE}/OPP-20261000074/03_dwg/OPP-20261000074 Master Layout.layout",
+                 P.output_path("#{BASE}/OPP-20261000074/03_dwg/งาน แบบ.skp", 'OPP-20261000074')
+  end
+
+  def test_model_name
+    assert_equal 'งาน แบบ', P.model_name("#{BASE}/OPP-1/งาน แบบ.skp")
+    assert_equal 'B', P.model_name('/a/B.SKP')
   end
 
   ADDRESS = "บริษัท B จำกัด\n253/9 AK Building ซอยสวนพลู6\nThung Maha Mek Sathon\nกรุงเทพมหานคร / Bangkok Thailand 10120"
