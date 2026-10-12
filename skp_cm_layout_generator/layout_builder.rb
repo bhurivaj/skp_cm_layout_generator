@@ -30,10 +30,14 @@ module SkpCm
           definition = definitions.find do |d|
             d.name == tag && d.type == Layout::AutoTextDefinition::TYPE_CUSTOM_TEXT
           end
-          if definition
-            definition.custom_text = text
-          else
+          unless definition
             warnings << "template ไม่มี auto-text #{tag}"
+            next
+          end
+          begin
+            definition.custom_text = text
+          rescue StandardError => e
+            warnings << "ตั้ง auto-text #{tag} ไม่ได้: #{e.message}"
           end
         end
       end
@@ -63,9 +67,16 @@ module SkpCm
       def swap(doc, page, old, viewport, scene_name, warnings)
         layer = old.layer_instance && old.layer_instance.definition
         raise 'ไม่พบ layer ของ viewport เดิม' unless layer
+        raise 'viewport เดิมถูก lock' if old.locked?
+        raise "layer #{layer.respond_to?(:name) ? layer.name : ''} ถูก lock" if layer.respond_to?(:locked?) && layer.locked?
 
         doc.add_entity(viewport, layer, page)
-        doc.remove_entity(old)
+        begin
+          doc.remove_entity(old)
+        rescue StandardError
+          doc.remove_entity(viewport) # never leave the new viewport stacked on the old one
+          raise
+        end
       rescue StandardError => e
         warnings << "แทน viewport #{scene_name} (หน้า #{page.name}) ไม่ได้: #{e.message}"
       end

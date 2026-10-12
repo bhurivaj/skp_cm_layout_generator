@@ -65,6 +65,11 @@ class TestSceneMatcher < Minitest::Test
     assert_nil M.match('Overall', [[0, 0, 1]], scenes).first['scene_index'], 'names must match exactly'
   end
 
+  def test_hairline_overlap_is_not_one_row
+    result = M.match('A', [[2.0, 1.0, 4.0], [1.0, 3.99, 7.0]], [])
+    assert_equal [0, 1], result.map { |r| r['viewport'] }, 'a 0.01" overlap must not merge stacked viewports'
+  end
+
   def test_no_viewports
     assert_equal [], M.match('A', [], SCENES)
   end

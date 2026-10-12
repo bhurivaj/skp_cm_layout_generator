@@ -25,20 +25,26 @@ module SkpCm
         end
       end
 
-      # Indexes into positions: top to bottom; viewports whose heights overlap form a row, read left to right
+      # Indexes into positions: top to bottom; viewports that share more than half of the
+      # shorter height form a row, read left to right
       def reading_order(positions)
         rows = []
         (0...positions.size).sort_by { |i| [positions[i][1], positions[i][0]] }.each do |i|
           _left, top, bottom = positions[i]
           row = rows.last
-          if row && top < row[:bottom]
+          if row && same_row?(row, top, bottom)
             row[:items] << i
             row[:bottom] = [row[:bottom], bottom].max
           else
-            rows << { items: [i], bottom: bottom }
+            rows << { items: [i], top: top, bottom: bottom }
           end
         end
         rows.flat_map { |row| row[:items].sort_by { |i| positions[i][0] } }
+      end
+
+      def same_row?(row, top, bottom)
+        overlap = [row[:bottom], bottom].min - top
+        overlap > 0.5 * [row[:bottom] - row[:top], bottom - top].min
       end
     end
   end
