@@ -4,7 +4,8 @@
 
 1. Login Odoo ที่ **SKP CM Extensions Hub** (0.5.0+)
 2. เปิด `.skp` ที่อยู่ในโฟลเดอร์โครงการ `OPP-xxxxxxxxxxx` แล้ว save
-3. กด **สร้าง LayOut** → ได้ `<ชื่อ skp>.layout` ในโฟลเดอร์เดียวกัน
+3. กด **สร้าง LayOut** → ได้ `OPP-xxxxxxxxxxx Master Layout.layout` ในโฟลเดอร์เดียวกัน (หน้า model ชื่อ `<ชื่อ skp> - <หน้า>`)
+4. เปิด `.skp` อีก model ในโฟลเดอร์เดียวกันแล้วกดอีกครั้ง → เพิ่มหน้าของ model นั้นต่อท้ายไฟล์เดิม (auto-text ไม่เปลี่ยน; กดซ้ำกับ model เดิมจะไม่เพิ่ม — ใช้ Update Model Reference ใน LayOut)
 
 ## ชื่อ scene มาตรฐาน
 

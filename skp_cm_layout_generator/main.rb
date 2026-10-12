@@ -2,6 +2,7 @@
 
 require 'sketchup.rb'
 require_relative 'project_info'
+require_relative 'title_text'
 require_relative 'hub_link'
 require_relative 'layout_builder'
 
@@ -67,16 +68,31 @@ module SkpCm
         return UI.messagebox(project) unless ok
         return UI.messagebox("ไม่พบ #{opp} ใน Odoo (CRM)") unless project
 
-        values, warnings = ProjectInfo.lead_values(opp, project)
-        output = ProjectInfo.output_path(skp)
+        output = ProjectInfo.output_path(skp, opp)
         if File.exist?(output)
-          return unless UI.messagebox("มี #{File.basename(output)} อยู่แล้ว — เขียนทับ?", MB_YESNO) == IDYES
+          warnings = append_to(output, skp)
+          return unless warnings
+        else
+          values, warnings = ProjectInfo.lead_values(opp, project)
+          warnings += LayoutBuilder.create(TEMPLATE, skp, output, values)
         end
-        warnings += LayoutBuilder.build(TEMPLATE, skp, output, values)
         UI.messagebox(ProjectInfo.summary(output, warnings))
       rescue LayoutBuilder::SaveError => e
         puts "#{LOG} save failed: #{e.message}"
         UI.messagebox("บันทึก #{File.basename(output)} ไม่ได้ — ถ้าเปิดไฟล์นี้อยู่ใน LayOut ให้ปิดก่อน")
+      end
+
+      # Adds this model's pages to the project's Master; nil when the user stops
+      def append_to(output, skp)
+        model = ProjectInfo.model_name(skp)
+        name = File.basename(output)
+        if TitleText.model_present?(LayoutBuilder.page_names(output), model, LayoutBuilder.model_page_names(TEMPLATE))
+          UI.messagebox("#{name} มีหน้าของ #{model} อยู่แล้ว — ถ้าแก้ model ให้กด Update Model Reference ใน LayOut")
+          return nil
+        end
+        return nil unless UI.messagebox("เพิ่มหน้าของ #{model} ต่อท้าย #{name}?", MB_YESNO) == IDYES
+
+        LayoutBuilder.append(TEMPLATE, skp, output)
       end
 
       def guard
