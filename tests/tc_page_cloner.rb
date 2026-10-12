@@ -192,6 +192,17 @@ class TestPageCloner < Minitest::Test
     assert_match(/หน้า A.*locked layer/, warnings.first)
   end
 
+  def test_entities_without_transformation_are_copied_as_is
+    p = line
+    t = text('t')
+    [p, t].each { |e| e.define_singleton_method(:transformation) { nil } }
+    doc = master
+    warnings = C.copy_page(Page.new('A', [Layout::Group.new([p, t])]), doc, :pg)
+    assert_empty warnings
+    copies = doc.added[0][0].entities
+    assert_equal [nil, nil], copies.map(&:transforms), 'transform! must not be called with nil'
+  end
+
   def test_missing_layer_falls_back_to_first_usable_layer_with_warning
     doc = master
     warnings = C.copy_page(Page.new('A', [text('t', 'Gone')]), doc, :pg)

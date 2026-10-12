@@ -81,7 +81,7 @@ module SkpCm
       def copy_text(text)
         copy = Layout::FormattedText.new('x', text.untransformed_bounds)
         copy.rtf = text.rtf
-        copy.transform!(text.transformation)
+        transform(copy, text)
         copy
       end
 
@@ -90,7 +90,7 @@ module SkpCm
         return nil unless segments
 
         copy = build_path(segments)
-        copy.transform!(path.transformation) if copy
+        transform(copy, path) if copy
         copy
       end
 
@@ -106,6 +106,12 @@ module SkpCm
           end
         end
         path
+      end
+
+      # Entities that were never moved/rotated have no explicit transformation (nil)
+      def transform(copy, original)
+        transformation = original.transformation
+        copy.transform!(transformation) if transformation
       end
 
       def copy_group(group, warnings, page_name)

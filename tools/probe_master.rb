@@ -22,18 +22,28 @@ module SkpCm
         "size=#{b.width.round(3)}x#{b.height.round(3)}#{text}"
     end
 
+    def self.texts(entities, found = [])
+      C.list(entities).each do |e|
+        found << e if e.is_a?(Layout::FormattedText)
+        texts(e.entities, found) if e.is_a?(Layout::Group)
+      end
+      found
+    end
+
     def self.run
       src = Layout::Document.open(TEMPLATE)
       dst = Layout::Document.open(TEMPLATE)
       tpage = C.list(src.pages).reverse.find { |p| C.list(p.entities).any? { |e| e.is_a?(Layout::SketchUpModel) } }
       puts "== template page #{tpage.name.inspect} nonshared:"
       C.list(tpage.nonshared_entities).each { |e| puts show(e) }
+      texts(tpage.nonshared_entities).each { |e| puts "  text in page/group: #{e.plain_text.inspect}" }
       page = dst.pages.add("probe - #{tpage.name}")
       puts "copy warnings: #{C.copy_page(tpage, dst, page).inspect}"
       puts '== copied page nonshared:'
       C.list(page.nonshared_entities).each { |e| puts show(e) }
+      texts(page.nonshared_entities).each { |e| puts "  copied text: #{e.plain_text.inspect}" }
       [['<PageName>', 'A-01, A-02'], ['<PageNumber>', 'A, B']].each do |tag, value|
-        text = C.list(page.nonshared_entities).find { |e| e.is_a?(Layout::FormattedText) && e.plain_text.include?(tag) }
+        text = texts(page.nonshared_entities).find { |e| e.plain_text.include?(tag) }
         next puts("NO TEXT #{tag}") unless text
 
         style = text.style
